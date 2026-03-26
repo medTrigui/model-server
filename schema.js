@@ -2,6 +2,15 @@ import { GraphQLSchema, GraphQLString, GraphQLObjectType, GraphQLInt, GraphQLNon
 import { model, EVACStates, LEDStates } from './model.js';
 import { PubSub } from 'graphql-subscriptions';
 
+// Cache PubSub instances per device to avoid memory leak from creating new instances per subscription
+const pubsubCache = new Map();
+function getPubSub(device) {
+  if (!pubsubCache.has(device)) {
+    pubsubCache.set(device, new PubSub({eventEmitter: device}));
+  }
+  return pubsubCache.get(device);
+}
+
 const EVACStatesType = new GraphQLEnumType({
   name: "EVACStates",
   values: {
@@ -182,7 +191,7 @@ const schema = new GraphQLSchema({
         resolve: obj => obj,
         subscribe: (_, {id}) => {
           if (0 <= id && id < model.devices.length) {
-            let pubsub = new PubSub({eventEmitter: model.devices[id]});
+            let pubsub = getPubSub(model.devices[id]);
             return pubsub.asyncIterableIterator("deviceChanged");
           }
         }
@@ -193,7 +202,7 @@ const schema = new GraphQLSchema({
         resolve: obj => obj,
         subscribe: (_, {id}) => {
           if (0 <= id && id < model.devices.length) {
-            let pubsub = new PubSub({eventEmitter: model.devices[id]});
+            let pubsub = getPubSub(model.devices[id]);
             return pubsub.asyncIterableIterator("ledStateChanged");
           }
         }

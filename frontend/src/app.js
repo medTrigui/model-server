@@ -13,7 +13,7 @@ const httpLink = new HttpLink({
 // Create a WebSocket link for subscriptions
 const wsLink = new GraphQLWsLink(
   createClient({
-    url: `ws://${window.location.host}/graphqlws`,
+    url: `ws://${window.location.host}/`,
   }),
 );
 

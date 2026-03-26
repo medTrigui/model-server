@@ -26,7 +26,9 @@ export class Device extends EventEmitter {
     forcedOccupancy = null;
 
     setEvacState(evacState) {
+        let needsUpdate = evacState !== this.evacState;
         this.evacState = evacState;
+        if (needsUpdate) this.emit('deviceChanged', this);
     }
 
     setLedState(ledState) {

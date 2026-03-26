@@ -1,42 +1,221 @@
-Model Server
-============
+# Model Server
 
-Performs routing, and holds prototype state.
+A GraphQL-based emergency guidance system that monitors building spaces and broadcasts real-time evacuation directives based on detected hazards.
 
-Frontend code is in [frontend/](https://github.com/poe-iit2/model-server/tree/main/frontend)
+## Purpose
 
-Local Dev
----------
+The Model Server serves as the central control and state management system for a PoE (Power over Ethernet) emergency monitoring network. It maintains device state for multiple rooms or zones, processes sensor inputs (temperature, smoke detection, occupancy), and broadcasts dynamic evacuation guidance to connected dashboard clients.
 
-```sh
+### Key Capabilities
+
+- Real-time device state management for emergency monitoring
+- GraphQL API for queries, mutations, and live subscriptions
+- Intelligent evacuation logic that provides spatial guidance (safe, danger zone, evacuation directions)
+- WebSocket-based subscription system for low-latency dashboard updates
+- Prototype implementation designed for integration with physical sensor networks
+
+## System Architecture
+
+### Backend Components
+
+**index.js**  
+Main server entry point. Configures Express HTTP server, GraphQL endpoint (port 5000), WebSocket subscription handler, and GraphiQL interactive interface.
+
+**schema.js**  
+GraphQL schema definition including Query (device state retrieval), Mutation (sensor updates and safety overrides), and Subscription (real-time device state changes).
+
+**model.js**  
+Core state model. Maintains per-room device objects with properties (temperature, humidity, occupancy, smoke detection, evacuation state, LED directives). Implements danger evaluation logic and evacuation guidance algorithm.
+
+### Frontend Components
+
+**frontend/src/**  
+React-based monitoring dashboard. Queries initial device state and subscribes to real-time updates via Apollo Client. Displays room status cards with current sensor readings and evacuation directives.
+
+## Getting Started
+
+### Development Environment
+
+Requirements: Node.js 16+, npm 8+
+
+Install dependencies:
+```bash
 npm install
-npm start
+cd frontend && npm install && cd ..
 ```
 
-Then navigate to http://localhost:5000
+Start the backend server:
+```bash
+npm start
+```
+The GraphQL endpoint will be available at http://localhost:5000
 
-Installation on Pi
-------------------
+In a separate terminal, start the frontend development server:
+```bash
+cd frontend && npm start
+```
+The dashboard will open at http://localhost:3000
 
-[mkosi](https://github.com/systemd/mkosi) is used to create a system image
-that bundles all the dependencies of the server into one package for easy
-deployment. This image can also be used to test another machine using the
-same exact dependencies as on the Pi. (qemu-user is useful if said machine
-is x86_64 and not arm64).
+### Testing the System
 
-```sh
+Once both servers are running, you can verify system operation using curl or GraphQL IDE:
+
+Query current device state:
+```bash
+curl -X POST http://localhost:5000/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query":"query{model{getDevice(id:0){temperature evacState danger ledState}}}"}'
+```
+
+Trigger a danger condition (temperature above 100°C):
+```bash
+curl -X POST http://localhost:5000/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation{updateSensors(id:0,sensors:{temperature:105}){success}}"}'
+```
+
+Watch the frontend dashboard update in real-time as the evacuation state changes for all rooms.
+
+## System Behavior
+
+### Danger Detection
+
+A device transitions to danger state when either condition is met:
+- Temperature exceeds 100°C (configurable in future versions)
+- Smoke detection triggered
+- Safety override: forceDanger mutation applied
+
+### Evacuation Guidance
+
+When danger is detected in any room, all devices transition to evacuation mode and receive spatial guidance:
+- Rooms before the danger zone: EVAC_LEFT
+- Danger zone rooms: DANGER
+- Rooms after the danger zone: EVAC_RIGHT
+
+This directs occupants toward the nearest safe exit.
+
+### Dashboard Updates
+
+The frontend subscribes to device state changes via GraphQL subscriptions. When any device state changes (sensors, danger flags, LED state, evacuation directives), connected dashboards receive updates within milliseconds.
+
+## Production Deployment
+
+### Container Image Build
+
+[mkosi](https://github.com/systemd/mkosi) creates a minimal, reproducible system image containing all dependencies and the model-server application.
+
+```bash
 mkosi
 ```
 
-On the Pi `systemd-container` must be installed:
+This generates `mkosi.output/model-server.raw`, a portable systemd container image.
 
-```sh
+### Raspberry Pi Installation
+
+Install systemd-container on the target system:
+```bash
 sudo apt install systemd-container
 ```
 
-`mkosi.output/model-server.raw` can then be scp'd to the Pi and installed to
-`/usr/local/lib/portables/`. The image can then be attached with:
-
-```sh
-portablectl attach -p trusted --enable --now model-server.raw
+Transfer the image to the Pi and install to portables directory:
+```bash
+scp mkosi.output/model-server.raw user@pi:/tmp/
+ssh user@pi sudo cp /tmp/model-server.raw /usr/local/lib/portables/
 ```
+
+Attach and enable the service:
+```bash
+sudo portablectl attach -p trusted --enable --now model-server.raw
+```
+
+The service will start automatically and persists across reboots.
+
+## API Reference
+
+### Queries
+
+**model.getDevice(id: Int!)**  
+Returns device state for a specified room ID (0-indexed).
+
+```graphql
+query {
+  model {
+    getDevice(id: 0) {
+      danger
+      occupied
+      temperature
+      humidity
+      airQuality
+      smokeDetected
+      ledState
+      evacState
+      forcedDanger
+      forcedOccupancy
+    }
+  }
+}
+```
+
+### Mutations
+
+**updateSensors(id: Int!, sensors: DeviceSensors!)**  
+Updates sensor readings for a device. Triggers danger evaluation and evacuation logic.
+
+**forceOccupancy(id: Int!, value: Boolean)**  
+Override occupancy state for a device (use for testing or manual override).
+
+**forceDanger(id: Int!, value: Boolean)**  
+Override danger state for a device (unsafe; only for authorized testing/emergency response).
+
+### Subscriptions
+
+**deviceChanged(id: Int!)**  
+Emitted when any field of a device changes (sensors, danger state, evacuation state).
+
+**ledStateChanged(id: Int!)**  
+Emitted when LED guidance state changes.
+
+## Configuration
+
+Current runtime configuration options:
+
+**DEVICE_COUNT** (environment variable)  
+Number of monitored rooms/zones. Default: 4
+
+```bash
+DEVICE_COUNT=10 npm start
+```
+
+**PORT** (environment variable)  
+HTTP/WebSocket server port. Default: 5000
+
+```bash
+PORT=8080 npm start
+```
+
+**NODE_ENV** (environment variable)  
+Set to "production" to disable GraphiQL IDE and development endpoints.
+
+## Development Notes
+
+See [CHANGES.md](CHANGES.md) for recent fixes and improvements.
+
+### Known Limitations
+
+- State is held in memory; restart loses all data
+- No persistence layer or audit logging
+- Safety thresholds (e.g., 100°C) are hardcoded
+- No user authentication or authorization
+- Input validation is minimal
+- Supports fixed number of rooms at startup only
+
+These limitations are acceptable for prototype deployments but should be addressed before production safety-critical use.
+
+## Support and Contributing
+
+For issues, feature requests, or questions, contact the development team.
+
+---
+
+**Version:** 1.0.0  
+**Last Updated:** March 2026
