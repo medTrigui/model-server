@@ -3,6 +3,25 @@
 ## Overview
 This document describes critical fixes applied to the model-server codebase to resolve subscription event propagation issues and improve system reliability.
 
+---
+
+### 4. Frontend Dependency Hardening and Build Cleanup
+**Files:** `frontend/package.json`, `frontend/package-lock.json`, `frontend/src/components/DeviceMonitor.js`  
+**Severity:** High
+
+The frontend dependency tree included several vulnerable transitive packages from the CRA toolchain, and the build emitted accessibility warnings for icon images.
+
+**Resolution:**
+- Added npm overrides for `resolve-url-loader`, `serialize-javascript`, `underscore`, and `yaml`
+- Reinstalled the frontend dependencies so the lockfile reflects the patched tree
+- Confirmed the frontend audit now reports zero vulnerabilities
+- Added empty `alt` text and `aria-hidden="true"` to decorative status icons in `DeviceMonitor`
+
+**Testing:**
+- Ran `npm install` in the frontend workspace
+- Ran `npm audit` in the frontend workspace and confirmed no remaining vulnerabilities
+- Ran `npm run build` successfully with no lint warnings
+
 ## Changes Applied
 
 ### 1. WebSocket Subscription Path Correction

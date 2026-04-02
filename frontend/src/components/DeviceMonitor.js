@@ -64,15 +64,15 @@ function DeviceMonitor({ deviceId }) {
     <div className="room-card alert">
         <h2>Room {deviceId+1}</h2>
         { device.danger
-            ? <div className="status alert-text"><img src="../UI_Icons/Red_Alert_Icon.png" width="5px"/> ALERT</div>
-            : <div className="status normal-text"><img src="../UI_Icons/Green_Alert_Icon.png" width="5px"/>  NORMAL</div>}
+            ? <div className="status alert-text"><img src="../UI_Icons/Red_Alert_Icon.png" width="5px" alt="" aria-hidden="true"/> ALERT</div>
+            : <div className="status normal-text"><img src="../UI_Icons/Green_Alert_Icon.png" width="5px" alt="" aria-hidden="true"/>  NORMAL</div>}
         
         <div className="info">
           <p>Smoke Detected: <strong>{device.smokeDetected === null ? 'Unknown' : device.smokeDetected ? 'Yes' : 'No'}</strong></p>
-          <p><img src="../UI_Icons/People_Count_Icon.png" width="20px"/> Occupied: {device.occupied === null ? 'Unknown' : device.occupied ? 'Yes' : 'No'}</p>
-          <p><img src="../UI_Icons/Temperature_Icon.png" width="10px"/> Temperature: {device.temperature !== null ? `${device.temperature}°C` : 'N/A'}</p>
-          <p><img src="../UI_Icons/Humidity_Icon.png" width="10px"/> Humidity: {device.humidity !== null ? `${device.humidity}%` : 'N/A'}</p>
-          <p><img src="../UI_Icons/Emergency_Door_Icon.png" width="20px"/> State: <span className={`evac-state ${device.evacState}`}>{device.evacState === 'EVAC' ? 'Evacuating' : "Safe"}</span></p>
+          <p><img src="../UI_Icons/People_Count_Icon.png" width="20px" alt="" aria-hidden="true"/> Occupied: {device.occupied === null ? 'Unknown' : device.occupied ? 'Yes' : 'No'}</p>
+          <p><img src="../UI_Icons/Temperature_Icon.png" width="10px" alt="" aria-hidden="true"/> Temperature: {device.temperature !== null ? `${device.temperature}°C` : 'N/A'}</p>
+          <p><img src="../UI_Icons/Humidity_Icon.png" width="10px" alt="" aria-hidden="true"/> Humidity: {device.humidity !== null ? `${device.humidity}%` : 'N/A'}</p>
+          <p><img src="../UI_Icons/Emergency_Door_Icon.png" width="20px" alt="" aria-hidden="true"/> State: <span className={`evac-state ${device.evacState}`}>{device.evacState === 'EVAC' ? 'Evacuating' : "Safe"}</span></p>
         </div>
       </div>
     /* <div className="device-monitor">
