@@ -11,6 +11,39 @@ function getPubSub(device) {
   return pubsubCache.get(device);
 }
 
+const SENSOR_LIMITS = Object.freeze({
+  temperature: { min: -50, max: 200 },
+  humidity: { min: 0, max: 100 },
+  airQuality: { min: 0, max: 1000 },
+});
+
+function isFiniteNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function validateSensorsInput(sensors) {
+  for (const [field, limits] of Object.entries(SENSOR_LIMITS)) {
+    const value = sensors[field];
+    if (value === undefined || value === null) continue;
+    if (!isFiniteNumber(value)) {
+      return `${field} must be a finite number`;
+    }
+    if (value < limits.min || value > limits.max) {
+      return `${field} must be between ${limits.min} and ${limits.max}`;
+    }
+  }
+
+  if (sensors.occupied !== undefined && sensors.occupied !== null && typeof sensors.occupied !== 'boolean') {
+    return 'occupied must be a boolean';
+  }
+
+  if (sensors.smokeDetected !== undefined && sensors.smokeDetected !== null && typeof sensors.smokeDetected !== 'boolean') {
+    return 'smokeDetected must be a boolean';
+  }
+
+  return null;
+}
+
 const EVACStatesType = new GraphQLEnumType({
   name: "EVACStates",
   values: {
@@ -90,6 +123,10 @@ const DeviceSensorsType = new GraphQLInputObjectType({
 const ModelType = new GraphQLObjectType({
   name: 'Model',
   fields: {
+    deviceCount: {
+      type: new GraphQLNonNull(GraphQLInt),
+      resolve: obj => obj.devices.length,
+    },
     getDevice: {
       type: DeviceType,
       args: {id: {type: new GraphQLNonNull(GraphQLInt)}},
@@ -110,6 +147,10 @@ const MutationReturnType = new GraphQLObjectType({
       resolve: obj => {
         return obj.success;
       }
+    },
+    message: {
+      type: GraphQLString,
+      resolve: obj => obj.message ?? null,
     }
   }
 })
@@ -131,17 +172,23 @@ const schema = new GraphQLSchema({
         type: MutationReturnType,
         args: {id: { type: new GraphQLNonNull(GraphQLInt) }, sensors: { type: new GraphQLNonNull(DeviceSensorsType) }},
         resolve: (_, {id, sensors}) => {
-          if (0 <= id && id < model.devices.length) {
-            let device = model.devices[id];
-            device.occupied = sensors.occupied;
-            device.temperature = sensors.temperature;
-            device.humidity = sensors.humidity;
-            device.airQuality = sensors.airQuality;
-            device.smokeDetected = sensors.smokeDetected;
-            device.deferedEval();
-            return {success: true};
+          if (!(0 <= id && id < model.devices.length)) {
+            return {success: false, message: 'Invalid device id'};
           }
-          return {success: false};
+
+          const validationError = validateSensorsInput(sensors);
+          if (validationError) {
+            return {success: false, message: validationError};
+          }
+
+          let device = model.devices[id];
+          if (sensors.occupied !== undefined) device.occupied = sensors.occupied;
+          if (sensors.temperature !== undefined) device.temperature = sensors.temperature;
+          if (sensors.humidity !== undefined) device.humidity = sensors.humidity;
+          if (sensors.airQuality !== undefined) device.airQuality = sensors.airQuality;
+          if (sensors.smokeDetected !== undefined) device.smokeDetected = sensors.smokeDetected;
+          device.deferredEval();
+          return {success: true};
         }
       },
       forceOccupancy: {
@@ -151,10 +198,10 @@ const schema = new GraphQLSchema({
           if (0 <= id && id < model.devices.length) {
             let device = model.devices[id];
             device.forcedOccupancy = value;
-            device.deferedEval();
+            device.deferredEval();
             return {success: true};
           }
-          return {success: false};
+          return {success: false, message: 'Invalid device id'};
         }
       },
       forceDanger: {
@@ -164,10 +211,10 @@ const schema = new GraphQLSchema({
           if (0 <= id && id < model.devices.length) {
             let device = model.devices[id];
             device.forcedDanger = value;
-            device.deferedEval();
+            device.deferredEval();
             return {success: true};
           }
-          return {success: false};
+          return {success: false, message: 'Invalid device id'};
         }
       }
     }

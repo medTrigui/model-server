@@ -1,5 +1,5 @@
 import React from 'react';
-import { ApolloClient, InMemoryCache, ApolloProvider, split, HttpLink } from '@apollo/client';
+import { ApolloClient, InMemoryCache, ApolloProvider, split, HttpLink, gql, useQuery } from '@apollo/client';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { createClient } from 'graphql-ws';
@@ -10,10 +10,12 @@ const httpLink = new HttpLink({
   uri: '/graphql',
 });
 
+const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+
 // Create a WebSocket link for subscriptions
 const wsLink = new GraphQLWsLink(
   createClient({
-    url: `ws://${window.location.host}/`,
+    url: `${wsProtocol}://${window.location.host}/graphqlws`,
   }),
 );
 
@@ -42,24 +44,44 @@ const client = new ApolloClient({
   }),
 });
 
-const device_count = 4
+const GET_MODEL_META = gql`
+  query GetModelMeta {
+    model {
+      deviceCount
+    }
+  }
+`;
+
+function Dashboard() {
+  const { data, loading, error } = useQuery(GET_MODEL_META);
+
+  if (loading) {
+    return <p>Loading devices...</p>;
+  }
+
+  if (error) {
+    return <p>Error: {error.message}</p>;
+  }
+
+  const deviceCount = data?.model?.deviceCount ?? 0;
+
+  return (
+    <div className="container">
+      <div className="header">
+        <div className="menu-icon">&#9776;</div>
+        <h1>Soteria Room Monitoring Status</h1>
+      </div>
+      <div className="rooms">
+        {[...Array.from({ length: deviceCount }).keys()].map(i => <DeviceMonitor deviceId={i} key={i} />)}
+      </div>
+    </div>
+  );
+}
 
 function App() {
   return (
     <ApolloProvider client={client}>
-      <div className="container">
-            <div className="header">
-              <div className="menu-icon">&#9776;</div>
-              <h1>Soteria Room Monitoring Status</h1>
-            </div>
-            <div className="rooms">
-              {[...Array.from({length: device_count}).keys()].map(i => <DeviceMonitor deviceId={i} key={i}/>)}
-            </div>  
-          {/* <!-- Add Room Dynamically Section --> */}
-          <div className  ="add-room">
-            <button> + Add New Room</button>
-          </div>  ` `
-      </div>
+      <Dashboard />
     </ApolloProvider>
   );
 }

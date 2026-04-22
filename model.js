@@ -1,5 +1,11 @@
 import { EventEmitter } from 'node:events';
 
+const DEFAULT_TEMP_DANGER_THRESHOLD = 100;
+const parsedThreshold = Number.parseFloat(process.env.TEMP_DANGER_THRESHOLD ?? '');
+const TEMP_DANGER_THRESHOLD = Number.isFinite(parsedThreshold)
+    ? parsedThreshold
+    : DEFAULT_TEMP_DANGER_THRESHOLD;
+
 export const EVACStates = Object.freeze({
     NORMAL: "normal",
     EVAC: "evac"
@@ -41,7 +47,7 @@ export class Device extends EventEmitter {
         this.emit('ledStateChanged', this.ledState);
     }
 
-    deferedEval() {
+    deferredEval() {
         if (this.forcedOccupancy != null) {
             this.occupied = this.forcedOccupancy;
         }
@@ -50,11 +56,11 @@ export class Device extends EventEmitter {
     }
 
     evalDanger() {
-        let danger = !!(this.temperature > 100 || this.smokeDetected);
+        let danger = !!(this.temperature > TEMP_DANGER_THRESHOLD || this.smokeDetected);
         if (this.forcedDanger !== null) {
             danger = this.forcedDanger;
         }
-        let needsUpdate = danger != this.danger;
+        let needsUpdate = danger !== this.danger;
         this.danger = danger;
         if (needsUpdate) updateGraph();
     }

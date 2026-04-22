@@ -32,6 +32,22 @@ Core state model. Maintains per-room device objects with properties (temperature
 **frontend/src/**  
 React-based monitoring dashboard. Queries initial device state and subscribes to real-time updates via Apollo Client. Displays room status cards with current sensor readings and evacuation directives.
 
+### Architecture Flowchart
+
+```mermaid
+flowchart LR
+    A[Sensor Input or Manual Override] --> B[GraphQL Mutation updateSensors forceDanger forceOccupancy]
+  B --> C[Device deferredEval]
+    C --> D[Danger Evaluation]
+    D --> E[updateGraph Guidance Mapping]
+    E --> F[Device Emits deviceChanged and ledStateChanged]
+    F --> G[GraphQL Subscription Resolvers]
+    G --> H[WebSocket Stream graphqlws]
+    H --> I[React Dashboard DeviceMonitor]
+
+    J[GraphQL Query model.deviceCount] --> I
+```
+
 ## Getting Started
 
 ### Development Environment
@@ -42,6 +58,11 @@ Install dependencies:
 ```bash
 npm install
 cd frontend && npm install && cd ..
+```
+
+Run backend tests:
+```bash
+npm test
 ```
 
 Start the backend server:
@@ -81,7 +102,7 @@ Watch the frontend dashboard update in real-time as the evacuation state changes
 ### Danger Detection
 
 A device transitions to danger state when either condition is met:
-- Temperature exceeds 100°C (configurable in future versions)
+- Temperature exceeds `TEMP_DANGER_THRESHOLD` (default 100°C)
 - Smoke detection triggered
 - Safety override: forceDanger mutation applied
 
@@ -134,12 +155,16 @@ The service will start automatically and persists across reboots.
 
 ### Queries
 
+**model.deviceCount**  
+Returns the total number of configured devices.
+
 **model.getDevice(id: Int!)**  
 Returns device state for a specified room ID (0-indexed).
 
 ```graphql
 query {
   model {
+    deviceCount
     getDevice(id: 0) {
       danger
       occupied
@@ -179,6 +204,13 @@ Emitted when LED guidance state changes.
 
 Current runtime configuration options:
 
+**TEMP_DANGER_THRESHOLD** (environment variable)  
+Temperature threshold used by danger evaluation. Default: 100
+
+```bash
+TEMP_DANGER_THRESHOLD=95 npm start
+```
+
 **DEVICE_COUNT** (environment variable)  
 Number of monitored rooms/zones. Default: 4
 
@@ -199,14 +231,13 @@ Set to "production" to disable GraphiQL IDE and development endpoints.
 ## Development Notes
 
 See [CHANGES.md](CHANGES.md) for recent fixes and improvements.
+See [DEPENDENCY-REMEDIATION.md](DEPENDENCY-REMEDIATION.md) for the active frontend dependency remediation and CRA migration plan.
 
 ### Known Limitations
 
 - State is held in memory; restart loses all data
 - No persistence layer or audit logging
-- Safety thresholds (e.g., 100°C) are hardcoded
 - No user authentication or authorization
-- Input validation is minimal
 - Supports fixed number of rooms at startup only
 
 These limitations are acceptable for prototype deployments but should be addressed before production safety-critical use.
@@ -218,4 +249,4 @@ For issues, feature requests, or questions, contact the development team.
 ---
 
 **Version:** 1.0.0  
-**Last Updated:** March 2026
+**Last Updated:** April 2026
