@@ -32,22 +32,6 @@ Core state model. Maintains per-room device objects with properties (temperature
 **frontend/src/**  
 React-based monitoring dashboard. Queries initial device state and subscribes to real-time updates via Apollo Client. Displays room status cards with current sensor readings and evacuation directives.
 
-### Architecture Flowchart
-
-```mermaid
-flowchart LR
-    A[Sensor Input or Manual Override] --> B[GraphQL Mutation updateSensors forceDanger forceOccupancy]
-  B --> C[Device deferredEval]
-    C --> D[Danger Evaluation]
-    D --> E[updateGraph Guidance Mapping]
-    E --> F[Device Emits deviceChanged and ledStateChanged]
-    F --> G[GraphQL Subscription Resolvers]
-    G --> H[WebSocket Stream graphqlws]
-    H --> I[React Dashboard DeviceMonitor]
-
-    J[GraphQL Query model.deviceCount] --> I
-```
-
 ## Getting Started
 
 ### Development Environment
@@ -232,6 +216,7 @@ Set to "production" to disable GraphiQL IDE and development endpoints.
 
 See [CHANGES.md](CHANGES.md) for recent fixes and improvements.
 See [DEPENDENCY-REMEDIATION.md](DEPENDENCY-REMEDIATION.md) for the active frontend dependency remediation and CRA migration plan.
+See [FLOWCHARTS.md](FLOWCHARTS.md) for detailed architecture and change-impact diagrams.
 
 ### Known Limitations
 
