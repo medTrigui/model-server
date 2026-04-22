@@ -52,8 +52,8 @@ flowchart TB
     end
 
     subgraph EDGE[Routing and Edge]
-      R1[/graphql HTTP Route]
-      R2[/graphqlws WebSocket Route]
+            R1["/graphql HTTP Route"]
+            R2["/graphqlws WebSocket Route"]
       R3[Dev Proxy + NGINX Proxy]
     end
 
