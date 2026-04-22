@@ -21,8 +21,10 @@ The frontend WebSocket client was attempting to connect to an incorrect path tha
 - Result: Subscription connections would fail to establish
 
 **Resolution:**
-- Updated frontend WebSocket connection URL to: `ws://${window.location.host}/`
-- This matches the backend WebSocket server path as configured in `index.js`
+- Added env-aware GraphQL endpoints in the frontend so local development can talk directly to the backend when the proxy path is unavailable.
+- Enabled permissive CORS on the backend to support direct frontend requests during local development.
+- Updated frontend WebSocket endpoint handling to use the local backend directly in development and the proxied `/graphqlws` path elsewhere.
+- Added `model.deviceCount` query field and switched frontend room rendering to use backend-reported device count.
 - Subscriptions now connect correctly and receive real-time device state updates
 
 **Testing:**

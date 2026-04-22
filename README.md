@@ -212,6 +212,12 @@ PORT=8080 npm start
 **NODE_ENV** (environment variable)  
 Set to "production" to disable GraphiQL IDE and development endpoints.
 
+**REACT_APP_GRAPHQL_HTTP_URL** (environment variable)  
+Optional absolute GraphQL HTTP endpoint for the frontend. Defaults to `http://localhost:5000/graphql` during local development and `/graphql` in other environments.
+
+**REACT_APP_GRAPHQL_WS_URL** (environment variable)  
+Optional absolute GraphQL subscription endpoint for the frontend. Defaults to `ws://localhost:5000/` during local development and `/graphqlws` in other environments.
+
 ## Development Notes
 
 See [CHANGES.md](CHANGES.md) for recent fixes and improvements.

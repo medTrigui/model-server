@@ -5,17 +5,19 @@ import { getMainDefinition } from '@apollo/client/utilities';
 import { createClient } from 'graphql-ws';
 import DeviceMonitor from './components/DeviceMonitor';
 
+const isLocalDevelopment = window.location.hostname === 'localhost' && window.location.port === '3000';
+const httpEndpoint = process.env.REACT_APP_GRAPHQL_HTTP_URL || (isLocalDevelopment ? 'http://localhost:5000/graphql' : '/graphql');
+const wsEndpoint = process.env.REACT_APP_GRAPHQL_WS_URL || (isLocalDevelopment ? 'ws://localhost:5000/' : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/graphqlws`);
+
 // Create an HTTP link for queries/mutations
 const httpLink = new HttpLink({
-  uri: '/graphql',
+  uri: httpEndpoint,
 });
-
-const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
 
 // Create a WebSocket link for subscriptions
 const wsLink = new GraphQLWsLink(
   createClient({
-    url: `${wsProtocol}://${window.location.host}/graphqlws`,
+    url: wsEndpoint,
   }),
 );
 

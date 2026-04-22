@@ -11,6 +11,7 @@
   "license": "UNLICENSED",
   "description": "",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^5.1.0",
     "graphql": "^16.10.0",
     "graphql-http": "^1.22.4",
