@@ -5,65 +5,7 @@ This document describes critical fixes applied to the model-server codebase to r
 
 ---
 
-### 5. Repository Analysis and Reliability Hardening (April 2026)
-**Files:** `schema.js`, `model.js`, `frontend/src/app.js`, `frontend/src/setupProxy.js`, `README.md`  
-**Severity:** High
 
-Detailed review of backend, frontend, and deployment wiring identified several follow-up issues after earlier subscription fixes.
-
-**Findings:**
-- Frontend subscriptions used a root WebSocket path that bypassed the established `/graphqlws` proxy route in development and nginx deployment.
-- Frontend room rendering used a hardcoded device count (`4`) while backend supports configurable `DEVICE_COUNT`.
-- `updateSensors` mutation overwrote existing device fields with `undefined` when partial sensor payloads were sent.
-- Sensor mutation input lacked bounds validation for safety-relevant values.
-- Backend danger threshold was hardcoded in model logic.
-- Frontend app JSX included stray template characters after the Add Room section.
-
-**Resolution:**
-- Updated frontend WebSocket endpoint to `ws(s)://<host>/graphqlws` and aligned dev proxy middleware usage.
-- Added `model.deviceCount` query field and switched frontend room rendering to use backend-reported device count.
-- Hardened `updateSensors` to apply only provided sensor fields (partial updates no longer clear existing values).
-- Added sensor validation in GraphQL resolver:
-  - temperature: -50 to 200
-  - humidity: 0 to 100
-  - airQuality: 0 to 1000
-- Added optional mutation response `message` for clearer invalid input or invalid device errors.
-- Introduced `TEMP_DANGER_THRESHOLD` environment variable (default `100`) for configurable danger detection.
-- Renamed internal model evaluation helper from `deferedEval` to `deferredEval` for consistency and maintainability.
-- Removed malformed JSX artifact from frontend app layout.
-
-**Verification:**
-- `node --check index.js && node --check model.js && node --check schema.js`
-- `cd frontend && npm install`
-- `cd frontend && npm run build` (successful compile)
-
-**Result:**
-- Subscription transport now matches dev and deployment proxy routes.
-- Frontend device cards scale with backend configuration instead of fixed count.
-- Mutation safety and data integrity improved for partial updates and out-of-range sensor values.
-- Danger threshold can now be tuned without code changes.
-
-**Residual Risk:**
-- Frontend `npm install` currently reports 17 vulnerabilities in the CRA dependency tree. This was not changed in this fix set and should be addressed in a dedicated dependency modernization pass.
-
----
-
-### 4. Frontend Dependency Hardening and Build Cleanup
-**Files:** `frontend/package.json`, `frontend/package-lock.json`, `frontend/src/components/DeviceMonitor.js`  
-**Severity:** High
-
-The frontend dependency tree included several vulnerable transitive packages from the CRA toolchain, and the build emitted accessibility warnings for icon images.
-
-**Resolution:**
-- Added npm overrides for `resolve-url-loader`, `serialize-javascript`, `underscore`, and `yaml`
-- Reinstalled the frontend dependencies so the lockfile reflects the patched tree
-- Confirmed the frontend audit now reports zero vulnerabilities
-- Added empty `alt` text and `aria-hidden="true"` to decorative status icons in `DeviceMonitor`
-
-**Testing:**
-- Ran `npm install` in the frontend workspace
-- Ran `npm audit` in the frontend workspace and confirmed no remaining vulnerabilities
-- Ran `npm run build` successfully with no lint warnings
 
 ## Changes Applied
 
@@ -174,6 +116,65 @@ Subscriptions updated to use: `let pubsub = getPubSub(model.devices[id])`
 - Verified multiple simultaneous subscriptions receive same events
 - Confirmed no listener accumulation
 
+### 5. Repository Analysis and Reliability Hardening (April 2026)
+**Files:** `schema.js`, `model.js`, `frontend/src/app.js`, `frontend/src/setupProxy.js`, `README.md`  
+**Severity:** High
+
+Detailed review of backend, frontend, and deployment wiring identified several follow-up issues after earlier subscription fixes.
+
+**Findings:**
+- Frontend subscriptions used a root WebSocket path that bypassed the established `/graphqlws` proxy route in development and nginx deployment.
+- Frontend room rendering used a hardcoded device count (`4`) while backend supports configurable `DEVICE_COUNT`.
+- `updateSensors` mutation overwrote existing device fields with `undefined` when partial sensor payloads were sent.
+- Sensor mutation input lacked bounds validation for safety-relevant values.
+- Backend danger threshold was hardcoded in model logic.
+- Frontend app JSX included stray template characters after the Add Room section.
+
+**Resolution:**
+- Updated frontend WebSocket endpoint to `ws(s)://<host>/graphqlws` and aligned dev proxy middleware usage.
+- Added `model.deviceCount` query field and switched frontend room rendering to use backend-reported device count.
+- Hardened `updateSensors` to apply only provided sensor fields (partial updates no longer clear existing values).
+- Added sensor validation in GraphQL resolver:
+  - temperature: -50 to 200
+  - humidity: 0 to 100
+  - airQuality: 0 to 1000
+- Added optional mutation response `message` for clearer invalid input or invalid device errors.
+- Introduced `TEMP_DANGER_THRESHOLD` environment variable (default `100`) for configurable danger detection.
+- Renamed internal model evaluation helper from `deferedEval` to `deferredEval` for consistency and maintainability.
+- Removed malformed JSX artifact from frontend app layout.
+
+**Verification:**
+- `node --check index.js && node --check model.js && node --check schema.js`
+- `cd frontend && npm install`
+- `cd frontend && npm run build` (successful compile)
+
+**Result:**
+- Subscription transport now matches dev and deployment proxy routes.
+- Frontend device cards scale with backend configuration instead of fixed count.
+- Mutation safety and data integrity improved for partial updates and out-of-range sensor values.
+- Danger threshold can now be tuned without code changes.
+
+**Residual Risk:**
+- Frontend `npm install` currently reports 17 vulnerabilities in the CRA dependency tree. This was not changed in this fix set and should be addressed in a dedicated dependency modernization pass.
+
+---
+
+### 4. Frontend Dependency Hardening and Build Cleanup
+**Files:** `frontend/package.json`, `frontend/package-lock.json`, `frontend/src/components/DeviceMonitor.js`  
+**Severity:** High
+
+The frontend dependency tree included several vulnerable transitive packages from the CRA toolchain, and the build emitted accessibility warnings for icon images.
+
+**Resolution:**
+- Added npm overrides for `resolve-url-loader`, `serialize-javascript`, `underscore`, and `yaml`
+- Reinstalled the frontend dependencies so the lockfile reflects the patched tree
+- Confirmed the frontend audit now reports zero vulnerabilities
+- Added empty `alt` text and `aria-hidden="true"` to decorative status icons in `DeviceMonitor`
+
+**Testing:**
+- Ran `npm install` in the frontend workspace
+- Ran `npm audit` in the frontend workspace and confirmed no remaining vulnerabilities
+- Ran `npm run build` successfully with no lint warnings
 ---
 
 ## Verification Summary
