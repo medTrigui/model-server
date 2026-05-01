@@ -48,12 +48,16 @@ export class Device extends EventEmitter {
     }
 
     deferredEval() {
-        if (this.forcedOccupancy != null) {
-            this.occupied = this.forcedOccupancy;
-        }
-        this.evalDanger();
+    if (this.forcedOccupancy != null) {
+        this.occupied = this.forcedOccupancy;
+    }
+    const prevDanger = this.danger;
+    const prevOccupied = this.occupied;
+    this.evalDanger();
+    if (this.danger !== prevDanger || this.occupied !== prevOccupied) {
         this.emit('deviceChanged', this);
     }
+}
 
     evalDanger() {
         let danger = !!(this.temperature > TEMP_DANGER_THRESHOLD || this.smokeDetected);
