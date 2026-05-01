@@ -2,7 +2,6 @@ import { GraphQLSchema, GraphQLString, GraphQLObjectType, GraphQLInt, GraphQLNon
 import { model, EVACStates, LEDStates } from './model.js';
 import { PubSub } from 'graphql-subscriptions';
 
-// Cache PubSub instances per device to avoid memory leak from creating new instances per subscription
 const pubsubCache = new Map();
 function getPubSub(device) {
   if (!pubsubCache.has(device)) {
@@ -32,15 +31,12 @@ function validateSensorsInput(sensors) {
       return `${field} must be between ${limits.min} and ${limits.max}`;
     }
   }
-
   if (sensors.occupied !== undefined && sensors.occupied !== null && typeof sensors.occupied !== 'boolean') {
     return 'occupied must be a boolean';
   }
-
   if (sensors.smokeDetected !== undefined && sensors.smokeDetected !== null && typeof sensors.smokeDetected !== 'boolean') {
     return 'smokeDetected must be a boolean';
   }
-
   return null;
 }
 
@@ -50,7 +46,7 @@ const EVACStatesType = new GraphQLEnumType({
     NORMAL: { value: EVACStates.NORMAL },
     EVAC: { value: EVACStates.EVAC },
   }
-})
+});
 
 const LEDStatesType = new GraphQLEnumType({
   name: "LEDStates",
@@ -61,62 +57,32 @@ const LEDStatesType = new GraphQLEnumType({
     EVAC_RIGHT: { value: LEDStates.EVAC_RIGHT },
     DANGER: { value: LEDStates.DANGER },
   }
-})
+});
 
 const DeviceType = new GraphQLObjectType({
   name: 'Device',
   fields: {
-    danger: {
-      type: new GraphQLNonNull(GraphQLBoolean),
-    },
-    occupied: {
-      type: GraphQLBoolean,
-    },
-    temperature: {
-      type: GraphQLFloat,
-    },
-    humidity: {
-      type: GraphQLFloat,
-    },
-    airQuality: {
-      type: GraphQLFloat,
-    },
-    ledState: {
-      type: new GraphQLNonNull(LEDStatesType),
-    },
-    evacState: {
-      type: new GraphQLNonNull(EVACStatesType),
-    },
-    smokeDetected: {
-      type: GraphQLBoolean,
-    },
-    forcedOccupancy: {
-      type: GraphQLBoolean,
-    },
-    forcedDanger: {
-      type: GraphQLBoolean,
-    }
+    danger: { type: new GraphQLNonNull(GraphQLBoolean) },
+    occupied: { type: GraphQLBoolean },
+    temperature: { type: GraphQLFloat },
+    humidity: { type: GraphQLFloat },
+    airQuality: { type: GraphQLFloat },
+    ledState: { type: new GraphQLNonNull(LEDStatesType) },
+    evacState: { type: new GraphQLNonNull(EVACStatesType) },
+    smokeDetected: { type: GraphQLBoolean },
+    forcedOccupancy: { type: GraphQLBoolean },
+    forcedDanger: { type: GraphQLBoolean },
   }
 });
 
 const DeviceSensorsType = new GraphQLInputObjectType({
   name: 'DeviceSensors',
   fields: {
-    occupied: {
-      type: GraphQLBoolean,
-    },
-    temperature: {
-      type: GraphQLFloat,
-    },
-    humidity: {
-      type: GraphQLFloat,
-    },
-    airQuality: {
-      type: GraphQLFloat,
-    },
-    smokeDetected: {
-      type: GraphQLBoolean,
-    }
+    occupied: { type: GraphQLBoolean },
+    temperature: { type: GraphQLFloat },
+    humidity: { type: GraphQLFloat },
+    airQuality: { type: GraphQLFloat },
+    smokeDetected: { type: GraphQLBoolean },
   }
 });
 
@@ -129,7 +95,7 @@ const ModelType = new GraphQLObjectType({
     },
     getDevice: {
       type: DeviceType,
-      args: {id: {type: new GraphQLNonNull(GraphQLInt)}},
+      args: { id: { type: new GraphQLNonNull(GraphQLInt) } },
       resolve: (obj, {id}) => {
         if (0 <= id && id < obj.devices.length) {
           return obj.devices[id];
@@ -144,16 +110,14 @@ const MutationReturnType = new GraphQLObjectType({
   fields: {
     success: {
       type: new GraphQLNonNull(GraphQLBoolean),
-      resolve: obj => {
-        return obj.success;
-      }
+      resolve: obj => obj.success,
     },
     message: {
       type: GraphQLString,
       resolve: obj => obj.message ?? null,
     }
   }
-})
+});
 
 const schema = new GraphQLSchema({
   query: new GraphQLObjectType({
@@ -170,17 +134,18 @@ const schema = new GraphQLSchema({
     fields: {
       updateSensors: {
         type: MutationReturnType,
-        args: {id: { type: new GraphQLNonNull(GraphQLInt) }, sensors: { type: new GraphQLNonNull(DeviceSensorsType) }},
+        args: {
+          id: { type: new GraphQLNonNull(GraphQLInt) },
+          sensors: { type: new GraphQLNonNull(DeviceSensorsType) }
+        },
         resolve: (_, {id, sensors}) => {
           if (!(0 <= id && id < model.devices.length)) {
             return {success: false, message: 'Invalid device id'};
           }
-
           const validationError = validateSensorsInput(sensors);
           if (validationError) {
             return {success: false, message: validationError};
           }
-
           let device = model.devices[id];
           if (sensors.occupied !== undefined) device.occupied = sensors.occupied;
           if (sensors.temperature !== undefined) device.temperature = sensors.temperature;
@@ -193,7 +158,10 @@ const schema = new GraphQLSchema({
       },
       forceOccupancy: {
         type: MutationReturnType,
-        args: {id: { type: new GraphQLNonNull(GraphQLInt) }, value: {type: GraphQLBoolean}},
+        args: {
+          id: { type: new GraphQLNonNull(GraphQLInt) },
+          value: { type: GraphQLBoolean }
+        },
         resolve: (_, {id, value}) => {
           if (0 <= id && id < model.devices.length) {
             let device = model.devices[id];
@@ -206,7 +174,10 @@ const schema = new GraphQLSchema({
       },
       forceDanger: {
         type: MutationReturnType,
-        args: {id: { type: new GraphQLNonNull(GraphQLInt) }, value: {type: GraphQLBoolean}},
+        args: {
+          id: { type: new GraphQLNonNull(GraphQLInt) },
+          value: { type: GraphQLBoolean }
+        },
         resolve: (_, {id, value}) => {
           if (0 <= id && id < model.devices.length) {
             let device = model.devices[id];
@@ -234,30 +205,29 @@ const schema = new GraphQLSchema({
       },
       deviceChanged: {
         type: DeviceType,
-        args: { id: { type: new GraphQLNonNull(GraphQLInt) }},
+        args: { id: { type: new GraphQLNonNull(GraphQLInt) } },
         resolve: obj => obj,
         subscribe: (_, {id}) => {
           if (0 <= id && id < model.devices.length) {
-          let pubsub = getPubSub(model.devices[id]);
-          return pubsub.asyncIterableIterator("deviceChanged");
-        }
-        throw new Error(`Invalid device id: ${id}`);
+            let pubsub = getPubSub(model.devices[id]);
+            return pubsub.asyncIterableIterator("deviceChanged");
+          }
+          throw new Error(`Invalid device id: ${id}`);
         }
       },
       ledStateChanged: {
         type: LEDStatesType,
-        args: { id: { type: new GraphQLNonNull(GraphQLInt) }},
+        args: { id: { type: new GraphQLNonNull(GraphQLInt) } },
         resolve: obj => obj,
         subscribe: (_, {id}) => {
           if (0 <= id && id < model.devices.length) {
-          let pubsub = getPubSub(model.devices[id]);
-          return pubsub.asyncIterableIterator("ledStateChanged");
+            let pubsub = getPubSub(model.devices[id]);
+            return pubsub.asyncIterableIterator("ledStateChanged");
+          }
+          throw new Error(`Invalid device id: ${id}`);
         }
-        throw new Error(`Invalid device id: ${id}`);
       }
     }
-      }
-    },
   }),
 });
 
