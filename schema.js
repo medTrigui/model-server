@@ -238,9 +238,10 @@ const schema = new GraphQLSchema({
         resolve: obj => obj,
         subscribe: (_, {id}) => {
           if (0 <= id && id < model.devices.length) {
-            let pubsub = getPubSub(model.devices[id]);
-            return pubsub.asyncIterableIterator("deviceChanged");
-          }
+          let pubsub = getPubSub(model.devices[id]);
+          return pubsub.asyncIterableIterator("deviceChanged");
+        }
+        throw new Error(`Invalid device id: ${id}`);
         }
       },
       ledStateChanged: {
@@ -249,10 +250,12 @@ const schema = new GraphQLSchema({
         resolve: obj => obj,
         subscribe: (_, {id}) => {
           if (0 <= id && id < model.devices.length) {
-            let pubsub = getPubSub(model.devices[id]);
-            return pubsub.asyncIterableIterator("ledStateChanged");
-          }
+          let pubsub = getPubSub(model.devices[id]);
+          return pubsub.asyncIterableIterator("ledStateChanged");
         }
+        throw new Error(`Invalid device id: ${id}`);
+      }
+    }
       }
     },
   }),
